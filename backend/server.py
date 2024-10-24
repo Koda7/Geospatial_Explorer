@@ -4,13 +4,35 @@ import os
 
 # sys.path.append("C:\\Users\\HP\\miniconda3\\lib\\site-packages")
 
-from flask import Flask, request, make_response
+from flask import Flask, request, make_response, send_from_directory
 import json
+from flask_cors import CORS
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='frontend-build')
+CORS(app, resources={r"/*": {"origins": "*"}})  # Configure CORS for all routes
 
-@app.route("/getRegion", methods=["POST"])
+# Serve React App for root URL
+@app.route('/')
+def serve_react_app():
+    return send_from_directory(app.static_folder, 'index.html')
+
+# Serve other static files (JS, CSS, images, etc.)
+@app.route('/<path:path>')
+def serve_static_files(path):
+    try:
+        return send_from_directory(app.static_folder, path)
+    except:
+        return send_from_directory(app.static_folder, 'index.html')
+
+@app.route("/getRegion", methods=["POST", "OPTIONS"])
 def getQueryRegion():
+    if request.method == "OPTIONS":  # Handle preflight request
+        response = make_response()
+        response.headers.add("Access-Control-Allow-Origin", "*")
+        response.headers.add("Access-Control-Allow-Headers", "*")
+        response.headers.add("Access-Control-Allow-Methods", "*")
+        return response
+    
     data = dict(request.form)
     # print(data)
     new_data = {}
@@ -60,4 +82,5 @@ def getQueryRegion():
 
 
 if __name__ == "__main__":
-    app.run(port=8080, debug=True)
+    port = int(os.environ.get("PORT", 8080))
+    app.run(host="0.0.0.0", port=port)
